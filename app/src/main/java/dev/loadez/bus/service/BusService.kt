@@ -1,19 +1,23 @@
-package dev.loadez.bus.service;
+package dev.loadez.bus.service
 
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.Service;
-import android.content.Intent;
+import android.app.Service
+import android.content.Intent
 import android.os.Build
-import android.os.IBinder;
+import android.os.IBinder
 import android.util.Log
 
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import dev.loadez.bus.domain.BusModel
+import dev.loadez.bus.domain.GtfsRealtime
+import java.lang.Exception
+import java.net.HttpURLConnection
+import java.net.URL
 
-public class BusService : Service() {
+class BusService : Service() {
     private  lateinit var workThread: Thread
     private var shouldRun = true
 
@@ -22,7 +26,7 @@ public class BusService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return START_STICKY;
+        return START_STICKY
     }
 
     override fun onCreate() {
@@ -42,30 +46,55 @@ public class BusService : Service() {
         //Cria o thread de trabalho
         workThread = Thread{
             while (shouldRun){
-                Thread.sleep(1000);
-                Log.d("TAG", "onCreate: RODEI!")
-                sendBusesUpdate()
+
+                try {
+                    Thread.sleep(10000)
+                    Log.d("TAG", "onCreate: RODEI!")
+
+                    val url =
+                        URL("https://s3-sa-east-1.amazonaws.com/dados.natal.br/FeedMessage.pb")
+                    val bytes = url.readBytes()
+
+
+                    val feed = GtfsRealtime.FeedMessage.parseFrom(bytes)
+
+                    //Cria a lista de atualizações
+                    val buses = feed.entityList.map {
+                        BusModel(
+                            "${it.vehicle.vehicle.id}@${it.vehicle.vehicle.label}",
+                            it.vehicle.position.latitude.toDouble(),
+                            it.vehicle.position.longitude.toDouble(),
+                            "",
+                            it.vehicle.trip.routeId,
+                        )
+
+                    }.toTypedArray()
+
+
+
+
+
+                    sendBusesUpdate(buses)
+                }
+                catch (ex:Exception){
+                    Log.e("TAG", ex.toString())
+                }
             }
         }
 
         //Algumas configurações do thread
-        workThread.isDaemon = true;
-        workThread.priority = 4;
+        workThread.isDaemon = true
+        workThread.priority = 4
         workThread.start()
     }
 
-    private fun sendBusesUpdate(){
+    private fun sendBusesUpdate(buses : Array<BusModel>){
         //Cria o intent para ser passado
         val intent = Intent("BusesUpdate")
 
-        //Cria a lista de atualizações
-        val buses = mutableListOf<BusModel>();
-        buses.add(BusModel("23_345",0.0,0.0,"",""));
-
         //Adiciona ela como um extra
-        intent.putExtra("Buses",buses.toTypedArray())
-        val t = buses.toTypedArray()
-        t
+        intent.putExtra("Buses",buses)
+
 
         //Faz o broadcast do intent
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)

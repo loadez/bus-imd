@@ -13,6 +13,7 @@ import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import dev.loadez.bus.domain.BusModel
+import dev.loadez.bus.domain.GtfsRealtime
 import dev.loadez.bus.service.BusService
 import org.osmdroid.api.IGeoPoint
 import org.osmdroid.config.Configuration
@@ -30,6 +31,7 @@ import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
 import org.osmdroid.views.overlay.simplefastpoint.SimplePointTheme
+import java.net.URL
 
 
 class MainActivity : AppCompatActivity() {
