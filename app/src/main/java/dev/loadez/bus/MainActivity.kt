@@ -6,10 +6,13 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.TypedArray
+import android.graphics.Color
+import android.graphics.Paint
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import dev.loadez.bus.domain.BusModel
@@ -89,6 +92,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
     private fun createFastOverlay(){
         simplePointTheme = SimplePointTheme(points)
 
@@ -96,7 +100,18 @@ class MainActivity : AppCompatActivity() {
 
         simpleFastPointOverlay = SimpleFastPointOverlay(simplePointTheme,simpleFastPointOverlayOptions)
 
+        simpleFastPointOverlay.setOnClickListener { points, point ->  handlePointClick(points,point)}
+
         map.overlays.add(simpleFastPointOverlay)
+    }
+
+
+    private fun handlePointClick(points: SimpleFastPointOverlay.PointAdapter, point: Int) {
+        val target = points.get(point) as LabelledGeoPoint
+        val bus = buses.firstOrNull{target.label==it.id}
+        if (bus!=null){
+            Toast.makeText(applicationContext,"Você clicou no ônibus ${bus.id}",Toast.LENGTH_SHORT).show()
+        }
     }
 
     private  fun checkPermissions(){
