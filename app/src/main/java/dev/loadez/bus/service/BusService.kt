@@ -50,11 +50,17 @@ class BusService : Service() {
 
         //Cria o thread de trabalho
         workThread = Thread{
+            var lastStaticUpdate:Long = -1800000
             while (shouldRun){
 
                 try {
-                    Thread.sleep(10000)
                     Log.d("TAG", "onCreate: RODEI!")
+
+                    val now = System.currentTimeMillis()
+                    if(now - lastStaticUpdate > 1800000){
+                        lastStaticUpdate = now
+                        updateStaticInfo()
+                    }
 
                     val url =
                         URL("https://s3-sa-east-1.amazonaws.com/dados.natal.br/FeedMessage.pb")
@@ -62,21 +68,6 @@ class BusService : Service() {
 
 
                     val feed = GtfsRealtime.FeedMessage.parseFrom(bytes)
-
-                    //Cria a lista de atualizações
-//                    val buses = feed.entityList.map {
-//                        BusModel(
-//                            null,
-//                            "${it.vehicle.vehicle.id}@${it.vehicle.vehicle.label}",
-//                            it.vehicle.position.latitude.toDouble(),
-//                            it.vehicle.position.longitude.toDouble(),
-//                            "",
-//                            it.vehicle.trip.routeId,
-//                        )
-//
-//                    }.toTypedArray()
-
-//                    sendBusesUpdate(buses)
 
                     //Adiciona qualquer novo ônibus no banco de dados
                     val buses = mutableListOf<BusModel>()
@@ -98,6 +89,7 @@ class BusService : Service() {
                     val locationsResult = LocationDAO.insertAll(locations)
 
                     sendBusesUpdate(locationsResult.toTypedArray())
+                    Thread.sleep(10000)
                 }
                 catch (ex:Exception){
                     Log.e("TAG", ex.toString())
@@ -109,6 +101,14 @@ class BusService : Service() {
         workThread.isDaemon = true
         workThread.priority = 4
         workThread.start()
+    }
+
+    private fun updateStaticInfo(){
+        val routesUrl = URL("https://s3-sa-east-1.amazonaws.com/dados.natal.br/routes.txt")
+        val text = routesUrl.readText()
+        for(l in text.split('\n')){
+
+        }
     }
 
     private fun sendBusesUpdate(locations : Array<LocationModel>){

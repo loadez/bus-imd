@@ -101,9 +101,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun handlePointClick(points: SimpleFastPointOverlay.PointAdapter, point: Int) {
         val target = points.get(point) as LabelledGeoPoint
-        val bus = locations.firstOrNull{target.label==it.vehicle_id.toString()}
-        if (bus!=null){
-            Toast.makeText(applicationContext,"Você clicou no ônibus ${bus.vehicle_id}",Toast.LENGTH_SHORT).show()
+        val location = locations.firstOrNull{target.label==it.vehicle_id.toString()}
+        if (location!=null){
+            Toast.makeText(applicationContext,"Você clicou no ônibus ${location.vehicle_id}",Toast.LENGTH_SHORT).show()
+            val intent:Intent = Intent(this,BusInfo::class.java)
+            intent.putExtra("vehicle_id",location.vehicle_id)
+            startActivity(intent)
         }
     }
 

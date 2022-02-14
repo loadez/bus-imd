@@ -2,11 +2,30 @@ package dev.loadez.bus.application
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
+import android.location.Location
 import android.util.Log
 import dev.loadez.bus.domain.LocationModel
 import dev.loadez.bus.infraestructure.DbAdapter
 
 object LocationDAO {
+
+    fun getLocationByVehicleId(id:Int):List<LocationModel>{
+        val result  = mutableListOf<LocationModel>()
+        with( DbAdapter.readDb!!.rawQuery("""SELECT * FROM location WHERE vehicle_id="$id" ORDER BY timestamp DESC;""",null)){
+            while (this.moveToNext()){
+                result.add(
+                    LocationModel(
+                        getInt(0),
+                        getInt(1),
+                        getFloat(2),
+                                getFloat(3),
+                        getLong(4),
+                    )
+                )
+            }
+        }
+        return result
+    }
 
     fun insert(location: LocationModel): Long {
         val values = ContentValues()
