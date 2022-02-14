@@ -11,10 +11,13 @@ import android.util.Log
 
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import dev.loadez.bus.application.BusDAO
 import dev.loadez.bus.domain.BusModel
 import dev.loadez.bus.domain.GtfsRealtime
+import dev.loadez.bus.application.LocationDAO
+import dev.loadez.bus.domain.LocationModel
+import dev.loadez.bus.infraestructure.DbAdapter
 import java.lang.Exception
-import java.net.HttpURLConnection
 import java.net.URL
 
 class BusService : Service() {
@@ -31,6 +34,8 @@ class BusService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        DbAdapter.initializeDatabase(this)
+
         val notification = Notification()
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
@@ -59,22 +64,40 @@ class BusService : Service() {
                     val feed = GtfsRealtime.FeedMessage.parseFrom(bytes)
 
                     //Cria a lista de atualizações
-                    val buses = feed.entityList.map {
-                        BusModel(
-                            "${it.vehicle.vehicle.id}@${it.vehicle.vehicle.label}",
-                            it.vehicle.position.latitude.toDouble(),
-                            it.vehicle.position.longitude.toDouble(),
-                            "",
-                            it.vehicle.trip.routeId,
-                        )
+//                    val buses = feed.entityList.map {
+//                        BusModel(
+//                            null,
+//                            "${it.vehicle.vehicle.id}@${it.vehicle.vehicle.label}",
+//                            it.vehicle.position.latitude.toDouble(),
+//                            it.vehicle.position.longitude.toDouble(),
+//                            "",
+//                            it.vehicle.trip.routeId,
+//                        )
+//
+//                    }.toTypedArray()
 
-                    }.toTypedArray()
+//                    sendBusesUpdate(buses)
 
+                    //Adiciona qualquer novo ônibus no banco de dados
+                    val buses = mutableListOf<BusModel>()
+                    for (e in feed.entityList){
+                        buses.add(BusModel(null,e.vehicle.vehicle.id,e.vehicle.vehicle.licensePlate,e.vehicle.vehicle.label))
+                    }
+                    val busesResult = BusDAO.insertAll(buses)
 
+                    //Adicionar as localizações
+                    val locations = mutableListOf<LocationModel>()
+                    for (e in feed.entityList){
+                        val vehicleId = busesResult.find {
+                            it.label == e.vehicle.vehicle.label &&
+                                    it.plate == e.vehicle.vehicle.licensePlate &&
+                                    it.vehicle_id == e.vehicle.vehicle.id
+                        }!!.id
+                        locations.add(LocationModel(null,vehicleId!!,e.vehicle.position.latitude,e.vehicle.position.longitude,e.vehicle.timestamp))
+                    }
+                    val locationsResult = LocationDAO.insertAll(locations)
 
-
-
-                    sendBusesUpdate(buses)
+                    sendBusesUpdate(locationsResult.toTypedArray())
                 }
                 catch (ex:Exception){
                     Log.e("TAG", ex.toString())
@@ -88,12 +111,12 @@ class BusService : Service() {
         workThread.start()
     }
 
-    private fun sendBusesUpdate(buses : Array<BusModel>){
+    private fun sendBusesUpdate(locations : Array<LocationModel>){
         //Cria o intent para ser passado
         val intent = Intent("BusesUpdate")
 
         //Adiciona ela como um extra
-        intent.putExtra("Buses",buses)
+        intent.putExtra("Locations",locations)
 
 
         //Faz o broadcast do intent

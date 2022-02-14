@@ -5,18 +5,15 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.res.TypedArray
-import android.graphics.Color
-import android.graphics.Paint
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import dev.loadez.bus.domain.BusModel
-import dev.loadez.bus.domain.GtfsRealtime
+import dev.loadez.bus.domain.LocationModel
+import dev.loadez.bus.infraestructure.DbAdapter
 import dev.loadez.bus.service.BusService
 import org.osmdroid.api.IGeoPoint
 import org.osmdroid.config.Configuration
@@ -25,16 +22,13 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
 
-import org.osmdroid.views.overlay.compass.CompassOverlay
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import org.osmdroid.views.overlay.simplefastpoint.LabelledGeoPoint
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlay
 import org.osmdroid.views.overlay.simplefastpoint.SimpleFastPointOverlayOptions
 import org.osmdroid.views.overlay.simplefastpoint.SimplePointTheme
-import java.net.URL
 
 
 class MainActivity : AppCompatActivity() {
@@ -45,28 +39,26 @@ class MainActivity : AppCompatActivity() {
     private lateinit var simpleFastPointOverlayOptions: SimpleFastPointOverlayOptions
     private lateinit var simpleFastPointOverlay: SimpleFastPointOverlay
 
-    private val buses = mutableListOf<BusModel>()
+    private val locations = mutableListOf<LocationModel>()
     private val points = mutableListOf<IGeoPoint>()
 
     private val broadCastReceiver:BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent != null && intent.hasExtra("Buses")) {
-                val updates:Array<BusModel> = intent.extras!!["Buses"] as Array<BusModel>
+            if (intent != null && intent.hasExtra("Locations")) {
+                val updates:Array<LocationModel> = intent.extras!!["Locations"] as Array<LocationModel>
 
                 for(i in updates){
-                    val result = buses.firstOrNull { it.id == i.id }
-                    if (result == null){
-                        buses.add(i)
+                    val index = locations.indexOfFirst { it.vehicle_id==i.vehicle_id }
+                    if(index!=-1){
+                        locations.removeAt(index)
                     }
-                    else{
-                        result.latitude = i.latitude
-                        result.longitude = i.longitude
-                    }
+                    locations.add(i)
+
                 }
 
                 points.clear()
-                for(i in buses){
-                    points.add(LabelledGeoPoint(i.latitude,i.longitude,i.id))
+                for(i in locations){
+                    points.add(LabelledGeoPoint(i.latitude.toDouble(),i.longitude.toDouble(),i.vehicle_id.toString()))
                 }
             }
         }
@@ -75,6 +67,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        DbAdapter.initializeDatabase(this)
         runService()
         setContentView(R.layout.activity_main)
         initializeMap()
@@ -108,9 +101,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun handlePointClick(points: SimpleFastPointOverlay.PointAdapter, point: Int) {
         val target = points.get(point) as LabelledGeoPoint
-        val bus = buses.firstOrNull{target.label==it.id}
+        val bus = locations.firstOrNull{target.label==it.vehicle_id.toString()}
         if (bus!=null){
-            Toast.makeText(applicationContext,"Você clicou no ônibus ${bus.id}",Toast.LENGTH_SHORT).show()
+            Toast.makeText(applicationContext,"Você clicou no ônibus ${bus.vehicle_id}",Toast.LENGTH_SHORT).show()
         }
     }
 

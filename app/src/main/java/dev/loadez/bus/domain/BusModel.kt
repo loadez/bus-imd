@@ -1,9 +1,8 @@
 package dev.loadez.bus.domain
 
 data class BusModel(
-    val id:String,
-    var latitude:Double,
-    var longitude:Double,
-    val company:String,
-    val route: String,
+    val id:Int?,
+    val vehicle_id:String,
+    val plate:String,
+    val label:String,
 )
