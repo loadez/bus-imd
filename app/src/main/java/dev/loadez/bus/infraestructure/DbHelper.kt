@@ -32,6 +32,8 @@ private class DatabaseHelper :SQLiteOpenHelper{
         if (db != null) {
             db.execSQL("""CREATE TABLE "bus" (	"id"	INTEGER,	"plate"	TEXT,	"label"	TEXT,	"vehicle_id"	TEXT,	UNIQUE("vehicle_id","label","plate"),	PRIMARY KEY("id" ASC))""")
             db.execSQL("""CREATE TABLE "location" ("id"	INTEGER,"vehicle_id"	INTEGER NOT NULL,"latitude"	REAL NOT NULL,"longitude"	REAL NOT NULL,"timestamp"	INTEGER NOT NULL,FOREIGN KEY("vehicle_id") REFERENCES "bus"("id"),UNIQUE("vehicle_id","timestamp"),PRIMARY KEY("id" ASC));""")
+            db.execSQL("""CREATE TABLE "agency" (	"id"	INTEGER,	"agency_id"	TEXT NOT NULL UNIQUE,	"name"	TEXT NOT NULL,	PRIMARY KEY("id" ASC));""")
+            db.execSQL("""CREATE TABLE "route" (	"id"	INTEGER,	"route_id"	TEXT UNIQUE,	"agency_id"	INTEGER NOT NULL,	"route_short_name"	TEXT NOT NULL,	"route_long_name"	TEXT NOT NULL,	PRIMARY KEY("id" ASC));""")
 
 
         }

@@ -11,11 +11,11 @@ import android.util.Log
 
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import dev.loadez.bus.application.AgencyDAO
 import dev.loadez.bus.application.BusDAO
-import dev.loadez.bus.domain.BusModel
-import dev.loadez.bus.domain.GtfsRealtime
 import dev.loadez.bus.application.LocationDAO
-import dev.loadez.bus.domain.LocationModel
+import dev.loadez.bus.application.RouteDAO
+import dev.loadez.bus.domain.*
 import dev.loadez.bus.infraestructure.DbAdapter
 import java.lang.Exception
 import java.net.URL
@@ -104,11 +104,56 @@ class BusService : Service() {
     }
 
     private fun updateStaticInfo(){
-        val routesUrl = URL("https://s3-sa-east-1.amazonaws.com/dados.natal.br/routes.txt")
-        val text = routesUrl.readText()
-        for(l in text.split('\n')){
-
+        val agencyUrl = URL("https://s3-sa-east-1.amazonaws.com/dados.natal.br/agency.txt")
+        val agencyText = agencyUrl.readText()
+        val agencyList = mutableListOf<AgencyModel>()
+        var skipFirst = true
+        for(l in agencyText.split('\n')){
+            if(skipFirst){
+                skipFirst=false
+                continue
+            }
+            val parts = l.split(',')
+            if(parts.size<2){
+                continue
+            }
+            agencyList.add(
+                AgencyModel(
+                    null,
+                    parts[0],
+                    parts[1],
+                )
+            )
         }
+        AgencyDAO.insertAll(agencyList)
+
+        val agencies = AgencyDAO.getALl()
+
+
+        val routeUrl = URL("https://s3-sa-east-1.amazonaws.com/dados.natal.br/routes.txt")
+        val routeText = routeUrl.readText()
+        val routeList = mutableListOf<RouteModel>()
+        skipFirst=true
+        for(l in routeText.split('\n')){
+            if(skipFirst){
+                skipFirst=false
+                continue
+            }
+            val parts = l.split(',')
+            if(parts.size<4){
+                continue
+            }
+            routeList.add(
+                RouteModel(
+                    null,
+                    parts[0],
+                    agencies.find { it.agencyId==parts[1] }!!.id!!,
+                    parts[2],
+                    parts[3],
+                )
+            )
+        }
+        RouteDAO.insertAll(routeList)
     }
 
     private fun sendBusesUpdate(locations : Array<LocationModel>){
